@@ -121,6 +121,7 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
       console.error('❌ Missing userId in Stripe session metadata.');
       return res.status(400).json({ success: false, error: 'Missing userId' });
     }
+    console.log("Success");
 
      /*
     try {
