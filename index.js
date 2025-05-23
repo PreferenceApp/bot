@@ -281,7 +281,7 @@ async function handleInteraction(interaction)
             }
             else
             {
-                const expirationTimestamp = user.labels[0];
+                const expirationTimestamp = parseInt(user.labels[0]);
                 const timestamp = Date.now();
 
                 if(expirationTimestamp > timestamp)
