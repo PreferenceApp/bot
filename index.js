@@ -273,7 +273,7 @@ async function handleInteraction(interaction)
           else
           {
             //if user has label and is valid
-            const user = await users.get(selfRegistered.documents[0].discordUserId);
+            const user = await users.get(selfRegistered.documents[0].$id);
 
             if(user.labels.length === 0)
             {
