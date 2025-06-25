@@ -30,6 +30,25 @@ const appwriteClient = new AppwriteClient()
 const users = new Users(appwriteClient);
 const db = new Databases(appwriteClient);
 
+async function getAppwriteUserDocument(discordUsername)
+{
+	 const registeredUser = await db.listDocuments(
+	  'db',
+	  'discordUsers',
+	  [
+	    Query.equal('discordUsername', [discordUsername])
+	  ]
+	 );
+	 if(registeredUser.documents.total === 0)
+	 {
+		return null;
+	 }
+	 else 
+	 {
+		return registeredUser.documents[0];
+	 }
+}
+
 async function handleInteraction(interaction) 
 {
     if(!interaction.isCommand()) 
@@ -40,295 +59,104 @@ async function handleInteraction(interaction)
     let message = "";
     try
     {
-      await interaction.deferReply({ ephemeral: true });
-      const { commandName, user, options } = interaction;
+      	await interaction.deferReply({ ephemeral: true });
+      	const { commandName, user, options } = interaction;
 
-      //see if we exist
-      const selfRegistered = await db.listDocuments(
-          'db',
-          'discordUsers',
-          [
-            Query.equal('discordUsername', [user.username])
-          ]
-      )
+	const myUsername = user.username;
+	const myAppwriteDoc = await getAppwriteUserDoc(myUsername);
+	if(myAppwriteDoc === null)
+	{
+		message = `You aren't registered. [Register](https://discord.com/oauth2/authorize?response_type=code&client_id=1373716555539550258&state=%7B"success"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2F%5C%2F"%2C"failure"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2Ffail"%2C"token"%3Afalse%7D&scope=identify+email&redirect_uri=https%3A%2F%2Ffra.cloud.appwrite.io%2Fv1%2Faccount%2Fsessions%2Foauth2%2Fcallback%2Fdiscord%2F682a090200212195fb22) to get started`;
+		throw new Error(message);
+	}
+	    
+	const theirUsername = options.getString('username');
+	const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
+	if(theirAppwriteDoc === null)
+	{
+		message = `${theirUsername} isn't registered`;
+		throw new Error(message);
+	}
 
-      if(selfRegistered.documents.length === 0)
-      {
-        message = `Your account isn't registered. Click [here](https://discord.com/oauth2/authorize?response_type=code&client_id=1373716555539550258&state=%7B"success"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2F%5C%2F"%2C"failure"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2Ffail"%2C"token"%3Afalse%7D&scope=identify+email&redirect_uri=https%3A%2F%2Ffra.cloud.appwrite.io%2Fv1%2Faccount%2Fsessions%2Foauth2%2Fcallback%2Fdiscord%2F682a090200212195fb22) to get started`;
-        throw new Error(message);
-      }
+	const myUser = user;
+	const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
 
-      if (commandName === 'like')
-      {
-          try
-          {
-            const username = options.getString('username').toLowerCase();
-            
-            //see if user exists
-            const otherRegistered = await db.listDocuments(
-                'db',
-                'discordUsers',
-                [
-                  Query.equal('discordUsername', [username])
-                ]
-            );
+	const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
+	const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
+	    
+      	if (commandName === 'like')
+      	{
+		if(doIAlreadyLikeThem.total > 0)
+		{
+			message = `Unable to perform action because you already like ${theirUsername}`;
+			throw new Error(message);
+		}
+		try
+		{
+			if(doTheyAlreadyLikeMe.total > 0)
+			{
+				const deleteLike = await db.deleteDocument('db', 'likes', doTheyAlreadyLikeMe.documents[0].$id);
+				if(theirUser)
+				{
+					await theirUser.send(`You matched with ${myUsername}`);
+				}
+				await user.send(`You matched with ${theirUsername}`);
+				message = `You matched with ${theirUsername}`;
+			}
+			else
+			{
+				const createLike = await db.createDocument('db', 'likes', ID.unique(), { userA: myUsername, userB: theirUsername }, [ Permission.read(Role.user(myAppwriteDoc.$id)) ]);
+				const theirSubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [myUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
+				if(theirSubscription.total > 0)
+				{
+					//potential parseInt
+					const subscriptionDate = new Date(theirSubscription.documents[0].timestamp);
+					const currentDate = new Date();
+					if (subscriptionDate > currentDate) 
+					{
+					  	await theirUser.send(`${myUsername} liked you`);
+					}
+					else
+					{
+						await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
+					}
+				}
+				else
+				{
+					await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
+				}
+				await myUser.send(`You liked ${theirUsername}`);
+				message = `You liked ${theirUsername}`;
 
-            if(otherRegistered.documents.length === 0)
-            {
-              //user doesn't exist
-              message = `${username} isn't registered`;
-              throw new Error(message);
-            }
 
-            const getDiscordUserInAppwrite = otherRegistered.documents[0];
-            const otherDiscordUser = await client.users.fetch(getDiscordUserInAppwrite.discordUserId) || null;
-
-            const doTheyLikeMe = await db.listDocuments(
-              'db',
-              'matches',
-              [
-                Query.equal('userA', [username]),
-                Query.equal('userB', [user.username]),
-              ]
-            );
-
-            if(doTheyLikeMe.documents.length === 0)
-            {
-              //They don't like me
-              if(user.username === username)
-              {
-                message = "You can't like yourself";
-                throw new Error(message);
-              }
-              const createMatchDoc = await db.createDocument(
-                'db',
-                'matches',
-                ID.unique(),
-                {
-                  userA: user.username,
-                  userB: username,
-                  match: false
-                },
-                [
-                  Permission.read(Role.user(selfRegistered.documents[0].$id))
-                ]
-              );
-
-              if(otherDiscordUser)
-              {
-                if(user.labels)
-                {
-                  await otherDiscordUser.send(`You matched with ${user.username}`);
-                }
-                else
-                {
-                  await otherDiscordUser.send("Someone likes you");
-                }
-              }
-            }
-            else
-            {
-                //They like me, it's a match
-                const createMyMatchDoc = await db.createDocument(
-                'db',
-                'matches',
-                ID.unique(),
-                {
-                  userA: user.username,
-                  userB: username,
-                  match: true
-                },
-                [
-                  Permission.read(Role.user(selfRegistered.documents[0].$id))
-                ]
-              );
-
-              const updateTheirMatchDoc = await db.updateDocument(
-                'db',
-                'matches',
-                doTheyLikeMe.documents[0].$id,
-                {
-                  userA: doTheyLikeMe.documents[0].userA,
-                  userB: doTheyLikeMe.documents[0].userB,
-                  match: true
-                },
-                [
-                  Permission.read(Role.user(otherRegistered.documents[0].$id))
-                ]
-              
-              );
-
-              if(otherDiscordUser)
-              {
-                await otherDiscordUser.send(`You matched with ${user.username}`);
-              }
-
-              await user.send(`You matched with ${username}`);
-            }
-          }
-          catch(error)
-          {
-              console.log(error);
-          }
+			}
+		}
+		catch(error)
+		{
+		        message = "An error occurred";
+	                throw new Error(message);
+			console.log(error);
+		}
       }
       else if(commandName === "unlike")
       {
-        try
-        {
-            const username = options.getString('username').toLowerCase();
-
-            const checkIfILikeThem = await db.listDocuments(
-              'db',
-              'matches',
-              [
-                Query.equal('userA', [user.username]),
-                Query.equal('userB', [username])
-              ]
-            );
-
-            if(checkIfILikeThem.documents.length === 0)
-            {
-              message = `There's no record that you ever liked ${username}`;
-              throw new Error(message);
-            }
-
-            const deleteMatch = await db.deleteDocument('db', 'matches', checkIfILikeThem.documents[0].$id);
-            
-            const checkIfTheyLikeMe = await db.listDocuments(
-              'db',
-              'matches',
-              [
-                Query.equal('userA', [username]),
-                Query.equal('userB', [user.username])
-              ]
-            );
-
-            if(checkIfTheyLikeMe.documents.length > 0)
-            {
-              if(checkIfTheyLikeMe.documents[0].match)
-              {
-                const removeMatch = await db.updateDocument('db', 'matches', checkIfTheyLikeMe.documents[0].$id, { userA: checkIfTheyLikeMe.documents[0].userA, userB: checkIfTheyLikeMe.documents[0].userB, match: false}, 
-                [ 
-                  Permission.read(Role.user(otherRegistered.documents[0].$id))
-                ]);
-              }
-            }
-        }
-        catch(error)
-        {
-          console.log(error);
-        }
-      }
-      else if(commandName === "matches")
-      {
-        try
-        {
-          const page = options.getInteger('page');
-          const myMatches = await db.listDocuments(
-          'db',
-          'matches',
-          [
-            Query.equal('userA', [user.username]),
-            Query.equal('match', true),
-            Query.offset(page - 1),
-            Query.limit(25)
-          ]);
-
-          if(myMatches.documents.length === 0)
-          {
-            message = "No matches found";
-            throw new Error(message);
-          }
-
-          const matchesMapped = myMatches.documents.map(doc => `${doc.userB}`);
-          message = matchesMapped.join('\n');
-        }
-        catch(error)
-        {
-          console.log(error);
-        }
-      }
-      else if(commandName === "admirers")
-      {
-        try
-        {
-
-          //CHECK IF USER LABEL UNIX IS > DATE.NOW
-          const page = options.getInteger('page');
-          const myAdmirers = await db.listDocuments(
-          'db',
-          'matches',
-          [
-            Query.equal('userB', [user.username]),
-            Query.equal('match', false),
-            Query.offset(page - 1),
-            Query.limit(25)
-          ]);
-
-          if(myAdmirers.documents.length === 0)
-          {
-            message = "No admirers found";
-            throw new Error(message);
-          }
-          else
-          {
-            //if user has label and is valid
-            const user = await users.get(selfRegistered.documents[0].$id);
-
-            if(user.labels.length === 0)
-            {
-              message = `${myAdmirers.total} people like you. [Find out](https://www.google.com) who it is`;
-            }
-            else
-            {
-                const expirationTimestamp = parseInt(user.labels[0]);
-                const timestamp = Date.now();
-
-                if(expirationTimestamp > timestamp)
-                {
-                  //valid
-                  const admirersMapped = myAdmirers.documents.map(doc => `${doc.userA}`);
-                  message = admirersMapped.join('\n');
-                }
-                else
-                {
-                  message = `${myAdmirers.total} people like you. [Find out](https://www.google.com) who it is`;
-                }
-            }
-          }
-        }
-        catch(error)
-        {
-          console.log(error);
-        }
-      }
-      else if(commandName === "crushes")
-      {
-        try
-        {
-          const page = options.getInteger('page');
-          const myCrushes = await db.listDocuments(
-          'db',
-          'matches',
-          [
-            Query.equal('userA', [user.username]),
-            Query.equal('match', false), 
-            Query.offset(page - 1),
-            Query.limit(25)
-          ]);
-
-          if(myCrushes.documents.length === 0)
-          {
-              message = "No crushes found";
-              throw new Error(message);
-          }
-          const crushesMapped = myCrushes.documents.map(doc => `${doc.userB}`);
-          message = crushesMapped.join('\n');
-        }
-        catch(error)
-        {
-          console.log(error);
-        }
+	if(doIAlreadyLikeThem.total === 0)
+	{
+		message = `Unable to perform action because you don't like ${theirUsername}`;
+		throw new Error(message);
+	}
+	try
+	{
+		const deleteLike = await db.deleteDocument('db', 'likes', doIAlreadyLikeThem.documents[0].$id);
+		await myUser.send(`You unliked ${theirUsername}`);
+		message = `You unliked ${theirUsername}`;
+	}
+	catch(error)
+	{
+	  message = "An error occurred";
+	  throw new Error(message);
+	  console.log(error);
+	}
       }
     }
     catch(error)
@@ -339,7 +167,7 @@ async function handleInteraction(interaction)
     {
         if(message === "")
         {
-            message = "Command executed successfully";
+            message = "An error occurred";
         }
         await interaction.editReply({
             content: message,
@@ -350,7 +178,7 @@ async function handleInteraction(interaction)
 
 async function reset()
 {            
-	client.on(Events.InteractionCreate, async interaction => {
+    client.on(Events.InteractionCreate, async interaction => {
     if(!interaction.isCommand()) 
     {
         return;
@@ -393,13 +221,19 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
     }
 
     try {
-      const user = await users.get(userId);
+	const registeredUser = await db.getDocument(
+	  'db',
+	  'discordUsers',
+	  userId
+	 );
       const timestamp = Date.now();
 
       let expirationTimestamp = 0;
-      if(user.labels.length > 0)
+      const mySubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [registeredUser.discordUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
+
+      if(mySubscription.total > 0)
       {
-        expirationTimestamp = parseInt(user.labels[0]);
+        expirationTimestamp = mySubscription.documents[0].timestamp;
       }
 
       let newTimestamp = 0;
@@ -429,12 +263,11 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
         newTimestamp += 365 * 24 * 60 * 60 * 1000;
       }
 
-
-      await users.updateLabels(userId, [newTimestamp.toString()]);
+      const createSubscription = await db.createDocument('db', 'subscriptions', ID.unique(), { username:registeredUser.discordUsername, timestamp:newTimestamp }, [ Permission.read(Role.user(userId)) ]);
 
       return res.json({ success: true });
     } catch (err) {
-      console.error('Failed to update user labels:', err);
+      console.error('Failed to update user:', err);
       return res.status(500).json({ success: false, error: 'Internal server error' });
     }
     
