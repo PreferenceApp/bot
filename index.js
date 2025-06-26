@@ -23,8 +23,8 @@ let client = new Client({
   });
 
 const appwriteClient = new AppwriteClient()
-  .setEndpoint('https://fra.cloud.appwrite.io/v1')
-  .setProject('682a090200212195fb22')       
+  .setEndpoint(process.env.APPWRITE_ENDPOINT) //https://fra.cloud.appwrite.io/v1
+  .setProject(process.env.APPWRITE_PROJECT_ID)   //682a090200212195fb22
   .setKey(process.env.APPWRITE_API_KEY); 
   
 const users = new Users(appwriteClient);
@@ -62,105 +62,102 @@ async function handleInteraction(interaction)
       	await interaction.deferReply({ ephemeral: true });
       	const { commandName, user, options } = interaction;
 
-	const myUsername = user.username;
-	const myAppwriteDoc = await getAppwriteUserDoc(myUsername);
-	if(myAppwriteDoc == null)
-	{
-		message = `You aren't registered. [Register](https://discord.com/oauth2/authorize?response_type=code&client_id=1373716555539550258&state=%7B"success"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2F%5C%2F"%2C"failure"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2Ffail"%2C"token"%3Afalse%7D&scope=identify+email&redirect_uri=https%3A%2F%2Ffra.cloud.appwrite.io%2Fv1%2Faccount%2Fsessions%2Foauth2%2Fcallback%2Fdiscord%2F682a090200212195fb22) to get started`;
-		throw new Error(message);
-	}
-	    
-	const theirUsername = options.getString('username');
-	const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
-  console.log(theirAppwriteDoc);
-	if(theirAppwriteDoc == null)
-	{
-		message = `${theirUsername} isn't registered`;
-		throw new Error(message);
-	}
+      const myUsername = user.username;
+      const myAppwriteDoc = await getAppwriteUserDoc(myUsername);
+      if(myAppwriteDoc == null)
+      {
+        message = `You aren't registered. [Register here](https://discord.com/oauth2/authorize?response_type=code&client_id=1373716555539550258&state=%7B"success"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2F%5C%2F"%2C"failure"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2Ffail"%2C"token"%3Afalse%7D&scope=identify+email&redirect_uri=https%3A%2F%2Ffra.cloud.appwrite.io%2Fv1%2Faccount%2Fsessions%2Foauth2%2Fcallback%2Fdiscord%2F682a090200212195fb22) to get started`;
+        throw new Error(message);
+      }
+          
+      const theirUsername = options.getString('username');
+      const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
+      if(theirAppwriteDoc == null)
+      {
+        message = `${theirUsername} isn't registered`;
+        throw new Error(message);
+      }
 
-	const myUser = user;
-	const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
+      const myUser = user;
+      const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
 
-	const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
-	const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
-	    
-      	if (commandName === 'like')
-      	{
-		if(doIAlreadyLikeThem.total > 0)
-		{
-			message = `Unable to perform action because you already like ${theirUsername}`;
-			throw new Error(message);
-		}
-		try
-		{
-			if(doTheyAlreadyLikeMe.total > 0)
-			{
-				const deleteLike = await db.deleteDocument('db', 'likes', doTheyAlreadyLikeMe.documents[0].$id);
-				if(theirUser)
-				{
-					await theirUser.send(`You matched with ${myUsername}`);
-				}
-				await user.send(`You matched with ${theirUsername}`);
-				message = `You matched with ${theirUsername}`;
-			}
-			else
-			{
-				const createLike = await db.createDocument('db', 'likes', ID.unique(), { userA: myUsername, userB: theirUsername }, [ Permission.read(Role.user(myAppwriteDoc.$id)) ]);
-				const theirSubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [theirUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
-				console.log(theirSubscription);
-        if(theirSubscription.total > 0)
-				{
-					//potential parseInt
-					const subscriptionDate = new Date(theirSubscription.documents[0].timestamp);
-					const currentDate = new Date();
-					if (subscriptionDate > currentDate) 
-					{
-					  	await theirUser.send(`${myUsername} liked you`);
-					}
-					else
-					{
-            console.log(subscriptionDate);
-            console.log(currentDate);
-						await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
-					}
-				}
-				else
-				{
-					await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
-				}
-				//await myUser.send(`You liked ${theirUsername}`);
-				message = `You liked ${theirUsername}`;
+      const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
+      const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
+          
+      if (commandName === 'like')
+      {
+        if(doIAlreadyLikeThem.total > 0)
+        {
+          message = `Unable to perform action because you already like ${theirUsername}`;
+          throw new Error(message);
+        }
+        try
+        {
+          if(doTheyAlreadyLikeMe.total > 0)
+          {
+            const deleteLike = await db.deleteDocument('db', 'likes', doTheyAlreadyLikeMe.documents[0].$id);
+            if(theirUser)
+            {
+              await theirUser.send(`You matched with ${myUsername}`);
+            }
+            await user.send(`You matched with ${theirUsername}`);
+            message = `You matched with ${theirUsername}`;
+          }
+          else
+          {
+            const createLike = await db.createDocument('db', 'likes', ID.unique(), { userA: myUsername, userB: theirUsername }, [ Permission.read(Role.user(myAppwriteDoc.$id)) ]);
+            const theirSubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [theirUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
+            console.log(theirSubscription);
+            if(theirSubscription.total > 0)
+            {
+              //potential parseInt
+              const subscriptionDate = new Date(theirSubscription.documents[0].endTimestamp);
+              const currentDate = new Date();
+              if (subscriptionDate > currentDate) 
+              {
+                  await theirUser.send(`${myUsername} liked you`);
+              }
+              else
+              {
+                console.log(subscriptionDate);
+                console.log(currentDate);
+                await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
+              }
+            }
+            else
+            {
+              await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
+            }
+            //await myUser.send(`You liked ${theirUsername}`);
+            message = `You liked ${theirUsername}`;
 
 
-			}
-		}
-		catch(error)
-		{
-		  message = "An error occurred";
-	    throw new Error(message);
-			console.log(error);
-		}
+          }
+        }
+        catch(error)
+        {
+          message = "An error occurred";
+          throw new Error(message);
+        }
       }
       else if(commandName === "unlike")
       {
-	if(doIAlreadyLikeThem.total === 0)
-	{
-		message = `Unable to perform action because you don't like ${theirUsername}`;
-		throw new Error(message);
-	}
-	try
-	{
-		const deleteLike = await db.deleteDocument('db', 'likes', doIAlreadyLikeThem.documents[0].$id);
-		//await myUser.send(`You unliked ${theirUsername}`);
-		message = `You unliked ${theirUsername}`;
-	}
-	catch(error)
-	{
-	  message = "An error occurred";
-	  throw new Error(message);
-	  console.log(error);
-	}
+        if(doIAlreadyLikeThem.total === 0)
+        {
+          message = `Unable to perform action because you don't like ${theirUsername}`;
+          throw new Error(message);
+        }
+        try
+        {
+          const deleteLike = await db.deleteDocument('db', 'likes', doIAlreadyLikeThem.documents[0].$id);
+          //await myUser.send(`You unliked ${theirUsername}`);
+          message = `You unliked ${theirUsername}`;
+        }
+        catch(error)
+        {
+          message = "An error occurred";
+          throw new Error(message);
+        }
       }
     }
     catch(error)
@@ -225,11 +222,11 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
     }
 
     try {
-	const registeredUser = await db.getDocument(
-	  'db',
-	  'discordUsers',
-	  userId
-	 );
+      const registeredUser = await db.getDocument(
+        'db',
+        'discordUsers',
+        userId
+      );
       const timestamp = Date.now();
 
       let expirationTimestamp = 0;
@@ -237,7 +234,7 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
 
       if(mySubscription.total > 0)
       {
-        expirationTimestamp = mySubscription.documents[0].timestamp;
+        expirationTimestamp = mySubscription.documents[0].endTimestamp;
       }
 
       let newTimestamp = 0;
@@ -267,7 +264,7 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
         newTimestamp += 365 * 24 * 60 * 60 * 1000;
       }
 
-      const createSubscription = await db.createDocument('db', 'subscriptions', ID.unique(), { username:registeredUser.discordUsername, timestamp:newTimestamp }, [ Permission.read(Role.user(userId)) ]);
+      const createSubscription = await db.createDocument('db', 'subscriptions', ID.unique(), { username:registeredUser.discordUsername, startTimestamp: timestamp, endTimestamp: newTimestamp }, [ Permission.read(Role.user(userId)) ]);
 
       return res.json({ success: true });
     } catch (err) {
