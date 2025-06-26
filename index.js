@@ -1,5 +1,5 @@
-/*import dotenv from 'dotenv';
-dotenv.config();*/
+import dotenv from 'dotenv';
+dotenv.config();
 
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { Client as AppwriteClient, Users, Databases, Permission, Role, Query, ID } from 'node-appwrite';
@@ -30,7 +30,7 @@ const appwriteClient = new AppwriteClient()
 const users = new Users(appwriteClient);
 const db = new Databases(appwriteClient);
 
-async function getAppwriteUserDocument(discordUsername)
+async function getAppwriteUserDoc(discordUsername)
 {
 	 const registeredUser = await db.listDocuments(
 	  'db',
@@ -64,7 +64,7 @@ async function handleInteraction(interaction)
 
 	const myUsername = user.username;
 	const myAppwriteDoc = await getAppwriteUserDoc(myUsername);
-	if(myAppwriteDoc === null)
+	if(myAppwriteDoc == null)
 	{
 		message = `You aren't registered. [Register](https://discord.com/oauth2/authorize?response_type=code&client_id=1373716555539550258&state=%7B"success"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2F%5C%2F"%2C"failure"%3A"https%3A%5C%2F%5C%2F9000-firebase-preferenceapp-1747585836579.cluster-aj77uug3sjd4iut4ev6a4jbtf2.cloudworkstations.dev%5C%2Ffail"%2C"token"%3Afalse%7D&scope=identify+email&redirect_uri=https%3A%2F%2Ffra.cloud.appwrite.io%2Fv1%2Faccount%2Fsessions%2Foauth2%2Fcallback%2Fdiscord%2F682a090200212195fb22) to get started`;
 		throw new Error(message);
@@ -72,7 +72,8 @@ async function handleInteraction(interaction)
 	    
 	const theirUsername = options.getString('username');
 	const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
-	if(theirAppwriteDoc === null)
+  console.log(theirAppwriteDoc);
+	if(theirAppwriteDoc == null)
 	{
 		message = `${theirUsername} isn't registered`;
 		throw new Error(message);
@@ -106,8 +107,9 @@ async function handleInteraction(interaction)
 			else
 			{
 				const createLike = await db.createDocument('db', 'likes', ID.unique(), { userA: myUsername, userB: theirUsername }, [ Permission.read(Role.user(myAppwriteDoc.$id)) ]);
-				const theirSubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [myUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
-				if(theirSubscription.total > 0)
+				const theirSubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [theirUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
+				console.log(theirSubscription);
+        if(theirSubscription.total > 0)
 				{
 					//potential parseInt
 					const subscriptionDate = new Date(theirSubscription.documents[0].timestamp);
@@ -118,6 +120,8 @@ async function handleInteraction(interaction)
 					}
 					else
 					{
+            console.log(subscriptionDate);
+            console.log(currentDate);
 						await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
 					}
 				}
@@ -125,7 +129,7 @@ async function handleInteraction(interaction)
 				{
 					await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
 				}
-				await myUser.send(`You liked ${theirUsername}`);
+				//await myUser.send(`You liked ${theirUsername}`);
 				message = `You liked ${theirUsername}`;
 
 
@@ -133,8 +137,8 @@ async function handleInteraction(interaction)
 		}
 		catch(error)
 		{
-		        message = "An error occurred";
-	                throw new Error(message);
+		  message = "An error occurred";
+	    throw new Error(message);
 			console.log(error);
 		}
       }
@@ -148,7 +152,7 @@ async function handleInteraction(interaction)
 	try
 	{
 		const deleteLike = await db.deleteDocument('db', 'likes', doIAlreadyLikeThem.documents[0].$id);
-		await myUser.send(`You unliked ${theirUsername}`);
+		//await myUser.send(`You unliked ${theirUsername}`);
 		message = `You unliked ${theirUsername}`;
 	}
 	catch(error)
