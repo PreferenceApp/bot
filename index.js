@@ -250,22 +250,35 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
         //We haven't expired yet, add time to expirationTimestamp.
       }
 
+      let receipt = "";
       if (item === "0") {
         // 1 week = 7 days * 24 hours * 60 minutes * 60 seconds * 1000 milliseconds
         newTimestamp += 7 * 24 * 60 * 60 * 1000;
+	receipt = "You successfully subscribed to Preference for 1 week. Enjoy!"
       } else if (item === "1") {
         // 1 month (approximate) = 30 days
         newTimestamp += 30 * 24 * 60 * 60 * 1000;
+	receipt = "You successfully subscribed to Preference for 1 month. Enjoy!"
       } else if (item === "2") {
+        // 3 months (approximate) = 3 * 30 days
+        newTimestamp += 3 * 30 * 24 * 60 * 60 * 1000;
+	receipt = "You successfully subscribed to Preference for 3 months. Enjoy!"
+      } else if (item === "3") {
         // 6 months (approximate) = 6 * 30 days
         newTimestamp += 6 * 30 * 24 * 60 * 60 * 1000;
-      } else if (item === "3") {
+	receipt = "You successfully subscribed to Preference for 6 months. Enjoy!"
+      } else if (item === "4") {
         // 1 year (approximate) = 365 days
         newTimestamp += 365 * 24 * 60 * 60 * 1000;
+	receipt = "You successfully subscribed to Preference for 1 year. Enjoy!"
       }
 
       const createSubscription = await db.createDocument('db', 'subscriptions', ID.unique(), { username:registeredUser.discordUsername, startTimestamp: timestamp, endTimestamp: newTimestamp }, [ Permission.read(Role.user(userId)) ]);
-
+      const myUser = await client.users.fetch(registeredUser.discordUserId) || null;
+      if(myUser)
+      {
+        await myUser.send(receipt);
+      }
       return res.json({ success: true });
     } catch (err) {
       console.error('Failed to update user:', err);
