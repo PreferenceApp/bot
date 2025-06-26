@@ -100,7 +100,7 @@ async function handleInteraction(interaction)
             {
               await theirUser.send(`You matched with ${myUsername}`);
             }
-            await user.send(`You matched with ${theirUsername}`);
+            await myUser.send(`You matched with ${theirUsername}`);
             message = `You matched with ${theirUsername}`;
           }
           else
