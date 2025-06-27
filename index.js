@@ -128,18 +128,21 @@ async function handleInteraction(interaction)
       }
           
       const theirUsername = options.getString('username') || null;
-      const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
-      if(theirAppwriteDoc == null)
+      if(theirUsername)
       {
-        message = `${theirUsername} isn't registered`;
-        throw new Error(message);
+	      const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
+	      if(theirAppwriteDoc == null)
+	      {
+	        message = `${theirUsername} isn't registered`;
+	        throw new Error(message);
+	      }
+	
+	      const myUser = user;
+	      const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
+	
+	      const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
+	      const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
       }
-
-      const myUser = user;
-      const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
-
-      const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
-      const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
           
       if (commandName === 'like')
       {
