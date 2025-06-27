@@ -70,7 +70,7 @@ async function handleInteraction(interaction)
         throw new Error(message);
       }
           
-      const theirUsername = options.getString('username');
+      const theirUsername = options.getString('username') || null;
       const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
       if(theirAppwriteDoc == null)
       {
@@ -119,8 +119,6 @@ async function handleInteraction(interaction)
               }
               else
               {
-                console.log(subscriptionDate);
-                console.log(currentDate);
                 await theirUser.send(`Someone liked you. Subscribe to find out who it is`);
               }
             }
@@ -139,6 +137,44 @@ async function handleInteraction(interaction)
           message = "An error occurred";
           throw new Error(message);
         }
+      }
+      else if(commandName === "search")
+      {
+	      if(theirAppwriteDoc == null)
+	      {
+		message = `${theirUsername} isn't registered`;
+	      }
+	      else
+	      {
+		message = `${theirUsername} is registered`;
+	      }
+      }
+      else if(commandName === "status")
+      {
+	      const mySubscription = await db.listDocuments('db', 'subscriptions', [ Query.equal('username', [myUsername]), Query.limit(1), Query.orderDesc('$createdAt') ]);
+	
+	      if(mySubscription.total > 0)
+	      {
+		if(mySubscription.documents[0].startTimestamp === mySubscription.documents[0].endTimestamp)
+		{
+			message = "No subscription history found";
+		}
+		else
+		{
+			const subscriptionStartTimestamp = Math.floor(parseInt(theirSubscription.documents[0].startTimestamp)/1000);
+			const subscriptionEndTimestamp = Math.floor(parseInt(theirSubscription.documents[0].endTimestamp)/1000);
+			
+			message = `Your most recent subscription started <t:${subscriptionStartTimestamp.toString()}:R> and will end <t:${subscriptionEndTimestamp.toString()}:R>`;
+		}
+	      }
+	      else
+	      {
+		message = "No subscription history found. Click (here) to view your most recent admirers for free (one-time use)";
+	      }
+      }
+      else if(commandName === "subscribe")
+      {
+    	const selectedDuration = interaction.options.getString('duration');
       }
       else if(commandName === "unlike")
       {
