@@ -243,7 +243,7 @@ async function handleInteraction(interaction)
 	        line_items: [lineItems[index]],
 	        success_url: "https://www.preferenceapp.pages.dev/success",
 	        cancel_url: "https://www.preferenceapp.pages.dev/cancel",
-	        client_reference_id: userId,
+	        client_reference_id: myAppwriteDoc.$id + "-" +  ID.unique(),
 	        metadata: { 
 	          userId: myAppwriteDoc.$id,
 	          item: index.toString()
