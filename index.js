@@ -127,25 +127,22 @@ async function handleInteraction(interaction)
         throw new Error(message);
       }
           
-      const theirUsername = options.getString('username') || null;
-      if(theirUsername)
-      {
-	      const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
-	      if(theirAppwriteDoc == null)
-	      {
-	        message = `${theirUsername} isn't registered`;
-	        throw new Error(message);
-	      }
-	
-	      const myUser = user;
-	      const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
-	
-	      const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
-	      const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
-      }
-          
       if (commandName === 'like')
       {
+	const theirUsername = options.getString('username') || null;
+	const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
+	if(theirAppwriteDoc == null)
+	{
+		message = `${theirUsername} isn't registered`;
+		throw new Error(message);
+	}
+	
+	const myUser = user;
+	const theirUser = await client.users.fetch(theirAppwriteDoc.discordUserId) || null;
+	
+	const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
+	const doTheyAlreadyLikeMe = await db.listDocuments('db', 'likes', [ Query.equal('userA', [theirUsername]), Query.equal('userB', myUsername) ]);
+	      
         if(doIAlreadyLikeThem.total > 0)
         {
           message = `Unable to perform action because you already like ${theirUsername}`;
@@ -200,14 +197,17 @@ async function handleInteraction(interaction)
       }
       else if(commandName === "search")
       {
-	      if(theirAppwriteDoc == null)
-	      {
-		message = `${theirUsername} isn't registered`;
-	      }
-	      else
-	      {
-		message = `${theirUsername} is registered`;
-	      }
+	const theirUsername = options.getString('username') || null;
+	const theirAppwriteDoc = await getAppwriteUserDoc(theirUsername);
+
+      if(theirAppwriteDoc == null)
+      {
+	message = `${theirUsername} isn't registered`;
+      }
+      else
+      {
+	message = `${theirUsername} is registered`;
+      }
       }
       else if(commandName === "status")
       {
@@ -264,6 +264,9 @@ async function handleInteraction(interaction)
       }
       else if(commandName === "unlike")
       {
+        const theirUsername = options.getString('username') || null;
+	const doIAlreadyLikeThem = await db.listDocuments('db', 'likes', [ Query.equal('userA', [myUsername]), Query.equal('userB', theirUsername) ]);
+	      
         if(doIAlreadyLikeThem.total === 0)
         {
           message = `Unable to perform action because you don't like ${theirUsername}`;
