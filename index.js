@@ -1,6 +1,6 @@
-/*import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 dotenv.config();
-*/
+
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { Client as AppwriteClient, Users, Databases, Permission, Role, Query, ID } from 'node-appwrite';
 
