@@ -14,6 +14,59 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const app = express()
 const port = process.env.PORT || 3000
 
+const lineItems = [
+    {
+      price_data: {
+        unit_amount: 500, // $5.00
+        currency: 'usd',
+        product_data: {
+          name: '1 Week',
+        },
+      },
+      quantity: 1,
+    },
+    {
+      price_data: {
+        unit_amount: 1000, // $10.00
+        currency: 'usd',
+        product_data: {
+          name: '1 Month',
+        },
+      },
+      quantity: 1,
+    },
+    {
+      price_data: {
+        unit_amount: 2500, // $25.00
+        currency: 'usd',
+        product_data: {
+          name: '3 Months',
+        },
+      },
+      quantity: 1,
+    },
+    {
+      price_data: {
+        unit_amount: 4500, // $45.00
+        currency: 'usd',
+        product_data: {
+          name: '6 Months',
+        },
+      },
+      quantity: 1,
+    },
+    {
+      price_data: {
+        unit_amount: 8500, // $85.00
+        currency: 'usd',
+        product_data: {
+          name: '1 Year',
+        },
+      },
+      quantity: 1,
+    }
+  ];
+
 let client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -175,6 +228,32 @@ async function handleInteraction(interaction)
       else if(commandName === "subscribe")
       {
     	const selectedDuration = interaction.options.getString('duration');
+	      //do magic to get the index of which option you've selected
+	let index = 0;
+	try {
+	      const session = await stripe.checkout.sessions.create({
+	        payment_method_types: ['card'],
+	        line_items: [lineItems[index]],
+	        success_url: "https://www.preferenceapp.pages.dev/success",
+	        cancel_url: "https://www.preferenceapp.pages.dev/cancel",
+	        client_reference_id: userId,
+	        metadata: { 
+	          userId: myAppwriteDoc.$id,
+	          item: index.toString()
+	        },
+	        mode: 'payment',
+	      });
+	
+	      if (!session || !session.url) {
+		message = 'Failed to create Stripe session.';
+	      }
+	      message = session.url;
+	} 
+	catch (err) 
+	{
+          message = "An error occurred";
+          throw new Error(message);
+	}
       }
       else if(commandName === "unlike")
       {
