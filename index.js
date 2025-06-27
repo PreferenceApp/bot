@@ -85,6 +85,10 @@ const db = new Databases(appwriteClient);
 
 async function getAppwriteUserDoc(discordUsername)
 {
+	if(discordUsername == null)
+	{
+		return null;
+	}
 	 const registeredUser = await db.listDocuments(
 	  'db',
 	  'discordUsers',
