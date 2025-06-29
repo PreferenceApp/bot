@@ -240,13 +240,13 @@ async function handleInteraction(interaction) {
           const timestamp = Date.now();
 
           const subscriptionStartTimestamp = Math.floor(
-            parseInt(theirSubscription.documents[0].startTimestamp) / 1000,
+            parseInt(mySubscription.documents[0].startTimestamp) / 1000,
           );
           const subscriptionEndTimestamp = Math.floor(
-            parseInt(theirSubscription.documents[0].endTimestamp) / 1000,
+            parseInt(mySubscription.documents[0].endTimestamp) / 1000,
           );
 
-          if(timestamp > theirSubscription.documents[0].endTimestamp) {
+          if(timestamp > mySubscription.documents[0].endTimestamp) {
              if(getPreviewSubscription.total > 0) {
                 message = `Your most recent subscription started <t:${subscriptionStartTimestamp.toString()}:R> and ended <t:${subscriptionEndTimestamp.toString()}:R>`;
               }
