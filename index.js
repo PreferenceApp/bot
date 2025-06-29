@@ -315,7 +315,7 @@ async function handleInteraction(interaction) {
       }
     }
   } catch (error) {
-    //console.log(error);
+    console.log(error);
   } finally {
     if (message === "") {
       message = "An error occurred";
