@@ -181,7 +181,7 @@ async function handleInteraction(interaction) {
               Query.orderDesc("$createdAt"),
             ],
           );
-          console.log(theirSubscription);
+
           if (theirSubscription.total > 0) {
             //potential parseInt
             const subscriptionDate = new Date(
@@ -315,7 +315,7 @@ async function handleInteraction(interaction) {
       }
     }
   } catch (error) {
-    console.log(error);
+    //console.log(error);
   } finally {
     if (message === "") {
       message = "An error occurred";
